@@ -201,7 +201,24 @@ touch /.liveimg-configured
 # https://bugzilla.redhat.com/show_bug.cgi?id=679486
 # the hostname must be something else than 'localhost'
 # https://bugzilla.redhat.com/show_bug.cgi?id=1370222
-echo "localhost-live" > /etc/hostname
+#echo "localhost-live" > /etc/hostname
+
+
+
+# set hostname before installation
+HOSTNAME="fws"
+if dmidecode | grep -i N501VW ; then
+  HOSTNAME="zenbook"
+fi
+if dmidecode | grep -i "Standard PC" ; then
+  HOSTNAME="kvm"
+fi
+if dmidecode | grep -i "XPS 13" ; then
+  HOSTNAME="xps13"
+fi
+
+hostnamectl set-hostname --static \$HOSTNAME
+
 
 EOF
 
@@ -238,21 +255,6 @@ for o in \`cat /proc/cmdline\` ; do
         ;;
     esac
 done
-
-# set hostname before installation
-HOSTNAME="fedora-ws"
-if dmidecode | grep -i N501VW ; then
-  HOSTNAME="fedora-zenbook"
-fi
-if dmidecode | grep -i "Standard PC" ; then
-  HOSTNAME="fedora-kvm"
-fi
-if dmidecode | grep -i "XPS 13" ; then
-  HOSTNAME="fedora-dell-xps"
-fi
-
-hostnamectl set-hostname --static $HOSTNAME
-zenity --info --text "\`hostnamectl status\`"
 
 # liveuser tap to click
 sudo -u liveuser gsettings set org.gnome.desktop.peripherals.touchpad tap-to-click true

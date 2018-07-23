@@ -4,5 +4,5 @@ setenforce 0
 
 livecd-creator --verbose \
   --config=flat-live-workstation.ks \
-  --fslabel=Fedora-bringout \
+  --fslabel=FWS-bringout \
   --cache=/var/cache/live
