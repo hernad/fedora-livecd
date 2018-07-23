@@ -247,28 +247,16 @@ done
 sudo -u liveuser gsettings set org.gnome.desktop.peripherals.touchpad tap-to-click true
 sudo -u liveuser gsettings set org.gnome.desktop.interface clock-show-date true
 
-# set hostname before installation
-HOSTNAME="fws.bring.out.ba"
-if dmidecode | grep -i N501VW ; then
-   HOSTNAME="fws-zenbook.bring.out.ba"
-fi
-if dmidecode | grep -i "Standard PC" ; then
-  HOSTNAME="fws-kvm.bring.out.ba"
-fi
-if dmidecode | grep -i "XPS 13" ; then
-  HOSTNAME="fws-xps13.bring.out.ba"
-fi
-
-echo \$HOSTNAME > /etc/hostname
-
 # if liveinst or textinst is given, start anaconda live installer
-if strstr "\`cat /proc/cmdline\`" textinst ; then
-   plymouth --quit
-   /usr/sbin/liveinst --text --lang us --geoloc 0 \$ks
-else
+if strstr "\`cat /proc/cmdline\`" liveinst ; then
    plymouth --quit
    /usr/sbin/liveinst --lang us --geoloc 0 \$ks
 fi
+if strstr "\`cat /proc/cmdline\`" textinst ; then
+    plymouth --quit
+   /usr/sbin/liveinst --text --lang us --geoloc 0 \$ks
+fi
+
 
 # configure X, allowing user to override xdriver
 if [ -n "\$xdriver" ]; then
@@ -508,6 +496,43 @@ visited=1
 
 [UserSpoke]
 visited=1
+FOE
+
+
+cat > /usr/local/bin/liveinst.sh << FOE
+#!/bin/bash
+
+# set hostname before installation
+HOSTNAME="fws.bring.out.ba"
+if dmidecode | grep -i N501VW ; then
+   HOSTNAME="fws-zenbook.bring.out.ba"
+fi
+if dmidecode | grep -i "Standard PC" ; then
+  HOSTNAME="fws-kvm.bring.out.ba"
+fi
+if dmidecode | grep -i "XPS 13" ; then
+  HOSTNAME="fws-xps13.bring.out.ba"
+fi
+
+echo \$HOSTNAME > /etc/hostname
+/usr/bin/liveinst --lang us --geoloc 0
+
+FOE
+chmod +x /usr/local/bin/liveinst.sh
+
+cat > /usr/share/applications/liveinst.desktop << FOE
+[Desktop Entry]
+Name=Install to Hard Drive
+GenericName=Install
+Comment=Install the live CD to your hard disk
+Categories=System;Utility;X-Red-Hat-Base;X-Fedora;GNOME;GTK;
+Exec=/usr/local/bin/liveinst.sh
+Terminal=false
+Type=Application
+Icon=anaconda
+StartupNotify=true
+NoDisplay=true
+X-Desktop-File-Install-Version=0.23
 FOE
 
 # make the installer show up
