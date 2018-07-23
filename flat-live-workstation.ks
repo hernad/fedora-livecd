@@ -30,7 +30,7 @@ url --mirrorlist="https://mirrors.fedoraproject.org/mirrorlist?repo=fedora-$rele
 # System authorization information
 auth --useshadow --passalgo=sha512
 # Firewall configuration
-firewall --enabled --service=mdns
+firewall --enabled --service=mdns,ssh
 # SELinux configuration
 selinux --enforcing
 
@@ -456,6 +456,10 @@ rm -f /boot/*-rescue*
 rm -f /etc/machine-id
 touch /etc/machine-id
 
+# off libvirt inside livecd
+/sbin/chkconfig libvirtd off
+
+/sbin/chkconfig docker off
 %end
 
 %post --nochroot
