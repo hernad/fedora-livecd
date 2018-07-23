@@ -201,24 +201,24 @@ touch /.liveimg-configured
 # https://bugzilla.redhat.com/show_bug.cgi?id=679486
 # the hostname must be something else than 'localhost'
 # https://bugzilla.redhat.com/show_bug.cgi?id=1370222
-#echo "localhost-live" > /etc/hostname
+echo "localhost-live" > /etc/hostname
 
 
 
 # set hostname before installation
-HOSTNAME="fws"
-if dmidecode | grep -i N501VW ; then
-  HOSTNAME="zenbook"
-fi
-if dmidecode | grep -i "Standard PC" ; then
-  HOSTNAME="kvm"
-fi
-if dmidecode | grep -i "XPS 13" ; then
-  HOSTNAME="xps13"
-fi
+#HOSTNAME="fws"
+#if dmidecode | grep -i N501VW ; then
+#  HOSTNAME="zenbook"
+#fi
+#if dmidecode | grep -i "Standard PC" ; then
+#  HOSTNAME="kvm"
+#fi
+#if dmidecode | grep -i "XPS 13" ; then
+#  HOSTNAME="xps13"
+#fi
 
-hostnamectl set-hostname --static \$HOSTNAME
-
+#hostnamectl set-hostname --static \$HOSTNAME
+#echo \$HOSTNAME > /etc/hostname
 
 EOF
 
@@ -610,7 +610,7 @@ flatpak
 
 postgresql-devel
 
-#docker
+docker
 fuse-exfat
 transmission
 
