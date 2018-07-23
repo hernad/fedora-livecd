@@ -259,17 +259,15 @@ if dmidecode | grep -i "XPS 13" ; then
   HOSTNAME="fws-xps13.bring.out.ba"
 fi
 
-hostnamectl set-hostname \$HOSTNAME
-
+echo \$HOSTNAME > /etc/hostname
 
 # if liveinst or textinst is given, start anaconda live installer
-if strstr "\`cat /proc/cmdline\`" liveinst ; then
-   plymouth --quit
-   /usr/sbin/liveinst --lang us --geoloc 0 \$ks
-fi
 if strstr "\`cat /proc/cmdline\`" textinst ; then
    plymouth --quit
-   /usr/sbin/liveinst --text \$ks
+   /usr/sbin/liveinst --text --lang us --geoloc 0 \$ks
+else
+   plymouth --quit
+   /usr/sbin/liveinst --lang us --geoloc 0 \$ks
 fi
 
 # configure X, allowing user to override xdriver
