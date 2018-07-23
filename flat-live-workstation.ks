@@ -37,7 +37,10 @@ selinux --enforcing
 # System services
 services --enabled="NetworkManager,ModemManager,sshd"
 # System bootloader configuration
-bootloader --location=none
+
+# hernad nouveau asuszenbook freeze
+bootloader --location=none --append="nouveau.modeset=0"
+
 # Clear the Master Boot Record
 zerombr
 # Partition clearing information
@@ -204,22 +207,6 @@ touch /.liveimg-configured
 echo "localhost-live" > /etc/hostname
 
 
-
-# set hostname before installation
-#HOSTNAME="fws"
-#if dmidecode | grep -i N501VW ; then
-#  HOSTNAME="zenbook"
-#fi
-#if dmidecode | grep -i "Standard PC" ; then
-#  HOSTNAME="kvm"
-#fi
-#if dmidecode | grep -i "XPS 13" ; then
-#  HOSTNAME="xps13"
-#fi
-
-#hostnamectl set-hostname --static \$HOSTNAME
-#echo \$HOSTNAME > /etc/hostname
-
 EOF
 
 # bah, hal starts way too late
@@ -260,10 +247,25 @@ done
 sudo -u liveuser gsettings set org.gnome.desktop.peripherals.touchpad tap-to-click true
 sudo -u liveuser gsettings set org.gnome.desktop.interface clock-show-date true
 
+# set hostname before installation
+HOSTNAME="fws.bring.out.ba"
+if dmidecode | grep -i N501VW ; then
+   HOSTNAME="fws-zenbook.bring.out.ba"
+fi
+if dmidecode | grep -i "Standard PC" ; then
+  HOSTNAME="fws-kvm.bring.out.ba"
+fi
+if dmidecode | grep -i "XPS 13" ; then
+  HOSTNAME="fws-xps13.bring.out.ba"
+fi
+
+hostnamectl set-hostname \$HOSTNAME
+
+
 # if liveinst or textinst is given, start anaconda live installer
 if strstr "\`cat /proc/cmdline\`" liveinst ; then
    plymouth --quit
-   /usr/sbin/liveinst \$ks
+   /usr/sbin/liveinst --lang us --geoloc 0 \$ks
 fi
 if strstr "\`cat /proc/cmdline\`" textinst ; then
    plymouth --quit
@@ -461,7 +463,7 @@ touch /etc/machine-id
 # off libvirt inside livecd
 /sbin/chkconfig libvirtd off
 
-/sbin/chkconfig docker off
+#/sbin/chkconfig docker off
 %end
 
 %post --nochroot
@@ -610,7 +612,7 @@ flatpak
 
 postgresql-devel
 
-docker
+#docker
 fuse-exfat
 transmission
 
