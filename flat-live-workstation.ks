@@ -449,8 +449,9 @@ touch /etc/machine-id
 # off libvirt inside livecd
 /sbin/chkconfig libvirtd off
 
-dnf install -y docker
-/sbin/chkconfig docker off
+# docker definitivno unistava liveimage
+#dnf install -y docker
+#/sbin/chkconfig docker off
 
 %end
 
@@ -533,18 +534,18 @@ Terminal=false
 Type=Application
 Icon=anaconda
 StartupNotify=true
-NoDisplay=true
+NoDisplay=false
 X-Desktop-File-Install-Version=0.23
 FOE
 
 # Show harddisk install in shell dash
-sed -i -e 's/NoDisplay=true/NoDisplay=false/' /usr/share/applications/liveinst.desktop ""
+#sed -i -e 's/NoDisplay=true/NoDisplay=false/' /usr/share/applications/liveinst.desktop ""
 # need to move it to anaconda.desktop to make shell happy
 mv /usr/share/applications/liveinst.desktop /usr/share/applications/anaconda.desktop
 
 cat >> /usr/share/glib-2.0/schemas/org.gnome.shell.gschema.override << FOE
 [org.gnome.shell]
-favorite-apps=['firefox.desktop', 'org.gnome.Nautilus.desktop', 'anaconda.desktop']
+favorite-apps=['firefox.desktop', 'org.gnome.Nautilus.desktop', 'anaconda.desktop', 'org.gnome.Terminal.desktop' ]
 FOE
 
 # Copy Anaconda branding in place
