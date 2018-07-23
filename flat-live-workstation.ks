@@ -449,7 +449,9 @@ touch /etc/machine-id
 # off libvirt inside livecd
 /sbin/chkconfig libvirtd off
 
-#/sbin/chkconfig docker off
+dnf install -y docker
+/sbin/chkconfig docker off
+
 %end
 
 %post --nochroot
@@ -504,17 +506,17 @@ cat > /usr/local/bin/liveinst.sh << FOE
 
 # set hostname before installation
 HOSTNAME="fws.bring.out.ba"
-if dmidecode | grep -i N501VW ; then
+if sudo dmidecode | grep -i N501VW ; then
    HOSTNAME="fws-zenbook.bring.out.ba"
 fi
-if dmidecode | grep -i "Standard PC" ; then
+if sudo dmidecode | grep -i "Standard PC" ; then
   HOSTNAME="fws-kvm.bring.out.ba"
 fi
-if dmidecode | grep -i "XPS 13" ; then
+if sudo dmidecode | grep -i "XPS 13" ; then
   HOSTNAME="fws-xps13.bring.out.ba"
 fi
 
-echo \$HOSTNAME > /etc/hostname
+sudo hostnamectl set-hostname \$HOSTNAME
 /usr/bin/liveinst --lang us --geoloc 0
 
 FOE
@@ -535,29 +537,19 @@ NoDisplay=true
 X-Desktop-File-Install-Version=0.23
 FOE
 
-# make the installer show up
-if [ -f /usr/share/applications/liveinst.desktop ]; then
-  # Show harddisk install in shell dash
-  sed -i -e 's/NoDisplay=true/NoDisplay=false/' /usr/share/applications/liveinst.desktop ""
-  # need to move it to anaconda.desktop to make shell happy
-  mv /usr/share/applications/liveinst.desktop /usr/share/applications/anaconda.desktop
+# Show harddisk install in shell dash
+sed -i -e 's/NoDisplay=true/NoDisplay=false/' /usr/share/applications/liveinst.desktop ""
+# need to move it to anaconda.desktop to make shell happy
+mv /usr/share/applications/liveinst.desktop /usr/share/applications/anaconda.desktop
 
-  cat >> /usr/share/glib-2.0/schemas/org.gnome.shell.gschema.override << FOE
+cat >> /usr/share/glib-2.0/schemas/org.gnome.shell.gschema.override << FOE
 [org.gnome.shell]
 favorite-apps=['firefox.desktop', 'org.gnome.Nautilus.desktop', 'anaconda.desktop']
 FOE
 
-  # Make the welcome screen show up
-  if [ -f /usr/share/anaconda/gnome/fedora-welcome.desktop ]; then
-    mkdir -p ~liveuser/.config/autostart
-    cp /usr/share/anaconda/gnome/fedora-welcome.desktop /usr/share/applications/
-    cp /usr/share/anaconda/gnome/fedora-welcome.desktop ~liveuser/.config/autostart/
-  fi
-
-  # Copy Anaconda branding in place
-  if [ -d /usr/share/lorax/product/usr/share/anaconda ]; then
+# Copy Anaconda branding in place
+if [ -d /usr/share/lorax/product/usr/share/anaconda ]; then
     cp -a /usr/share/lorax/product/* /
-  fi
 fi
 
 # rebuild schema cache with any overrides we installed
