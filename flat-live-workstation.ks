@@ -51,7 +51,7 @@ part / --size=9656
 
 %post
 # FIXME: it'd be better to get this installed from a package
-cat > /etc/rc.d/init.d/livesys << EOF
+cat > /etc/rc.d/init.d/livesys << EOFLIVESYS
 #!/bin/bash
 #
 # live: Init script for live image
@@ -207,7 +207,7 @@ touch /.liveimg-configured
 echo "localhost-live" > /etc/hostname
 
 
-EOF
+EOFLIVESYS
 
 # bah, hal starts way too late
 cat > /etc/rc.d/init.d/livesys-late << EOF
@@ -260,12 +260,12 @@ fi
 
 # configure X, allowing user to override xdriver
 if [ -n "\$xdriver" ]; then
-   cat > /etc/X11/xorg.conf.d/00-xdriver.conf <<FOE
+   cat > /etc/X11/xorg.conf.d/00-xdriver.conf <<FOEX
 Section "Device"
 	Identifier	"Videocard0"
 	Driver	"\$xdriver"
 EndSection
-FOE
+FOEX
 fi
 
 EOF
@@ -308,11 +308,11 @@ rm -f /var/lib/rpm/__db*
 
 # home templates
 mkdir -p /etc/home_tmpl
-cat >> /etc/home_tmpl/.tmux.conf << EOF
+cat >> /etc/home_tmpl/.tmux.conf << EOFTMUX
 source "/usr/share/tmux/powerline.conf"
-EOF
+EOFTMUX
 
-cat >> /etc/home_tmpl/.bashrc << EOF
+cat >> /etc/home_tmpl/.bashrc << EOFBASHRC
 # .bashrc
 
 # Source global definitions
@@ -325,10 +325,9 @@ if [ -f \`which powerline-daemon\` ]; then
   POWERLINE_BASH_SELECT=1
   . /usr/share/powerline/bash/powerline.sh
 fi
+EOFBASHRC
 
-EOF
-
-cat >> /etc/home_tmpl/.vimrc << EOF
+cat >> /etc/home_tmpl/.vimrc << EOFVIMRC
 python3 from powerline.vim import setup as powerline_setup
 python3 powerline_setup()
 python3 del powerline_setup
@@ -336,10 +335,10 @@ set laststatus=2 " Always display the statusline in all windows
 set showtabline=2 " Always display the tabline, even if there is only one tab
 set noshowmode " Hide the default mode text (e.g. -- INSERT -- below the statusline)
 set t_Co=256
-EOF
+EOFVIMRC
 
 mkdir -p /etc/home_tmpl/.config/gtk-3.0
-cat >> /etc/home_tmpl/.config/gtk-3.0/gtk.css << EOF
+cat >> /etc/home_tmpl/.config/gtk-3.0/gtk.css << EOFCSS
 scrollbar slider {
     /* Size of the slider */
     min-width: 20px;
@@ -349,9 +348,9 @@ scrollbar slider {
     /* Padding around the slider */
     border: 5px solid transparent;
 }
-EOF
+EOFCSS
 
-cat >> /usr/local/bin/setup_after_install.sh << EOF
+cat >> /usr/local/bin/setup_user_after_install.sh << EOFSETUPUSER
 #!/bin/bash
 
 gsettings set org.gnome.desktop.peripherals.touchpad tap-to-click true
@@ -360,39 +359,43 @@ gsettings set org.gnome.desktop.interface clock-show-date true
 #for f in /etc/home_tmpl ; do
 #   cp -v $f ~/
 #done
-rsync -avz /etc/home_tmpl/* ~/
-
-echo set $\USERNAME as libvirt group member
+rsync -avz /etc/home_tmpl/ ~/
+chown -R \$USERNAME:\$USERNAME ~
+echo set \$USERNAME as libvirt group member
 sudo usermod -aG libvirt \$USERNAME
-newgrp libvirt
 
-echo set $USERNAME as wheel group memmber - sudo without password enabled !
+echo set \$USERNAME as wheel group memmber
 sudo usermod -aG wheel \$USERNAME
-newgrp wheel
 
+echo set \$USERNAME sudo without password enabled 
+su root -c "echo \"\$USERNAME ALL=(ALL) NOPASSWD: ALL\" >> /etc/sudoers"
 
-#i915.enable_execlists=0 acpi_osi=! \"acpi_osi=Windows 2009\"
+if sudo dmidecode | grep -i N501VW ; then
+   echo asus zenbook N501VW fix grub
+   sed -e  's/GRUB_CMDLINE_LINUX=\"\(.*\)\"/GRUB_CMDLINE_LINUX="\1 nouveau.modeset=0 i915.enable_execlists=0 acpi_osi=! acpi_osi=\"Windows 2009\""/' /etc/default/grub > /tmp/grub
+   sudo mv /etc/default/grub /etc/default/grub.orig
+   sudo cp /tmp/grub /etc/default/grub
+   sudo grub2-mkconfig -o /boot/efi/EFI/fedora/grub.cfg
+fi
 
-echo set up gdm auto-login
+echo set up gdm auto-login for user: \$USERNAME
 
-cat > /tmp/custom.conf << FOE
+cat > /tmp/custom.conf << FOEB
 [daemon]
 AutomaticLoginEnable=True
 AutomaticLogin=\$USERNAME
-FOE
+FOEB
 sudo cp /tmp/custom.conf /etc/gdm/custom.conf
+EOFSETUPUSER
 
-
-EOF
-
-chmod +x /usr/local/bin/setup_after_install.sh
+chmod +x /usr/local/bin/setup_user_after_install.sh
 
 cat /etc/resolv.conf
 ping -c 1 8.8.8.8
 
-cat >> /etc/resolv.conf << EOF
+cat >> /etc/resolv.conf << EOFRESOLV
 nameserver 8.8.8.8
-EOF
+EOFRESOLV
 
 ping -c 1 www.google.ba
 
@@ -449,10 +452,6 @@ touch /etc/machine-id
 # off libvirt inside livecd
 /sbin/chkconfig libvirtd off
 
-# docker definitivno unistava liveimage
-#dnf install -y docker
-#/sbin/chkconfig docker off
-
 %end
 
 %post --nochroot
@@ -464,33 +463,35 @@ if [ "$(uname -i)" = "i386" -o "$(uname -i)" = "x86_64" ]; then
   cp /usr/bin/livecd-iso-to-disk $LIVE_ROOT/LiveOS
 fi
 
+/usr/local/bin/setup_after_install.sh
+
 %end
 
 %post
 
-cat >> /etc/rc.d/init.d/livesys << EOF
+cat >> /etc/rc.d/init.d/livesys << EOFLIVESYS
 
 
 # disable gnome-software automatically downloading updates
-cat >> /usr/share/glib-2.0/schemas/org.gnome.software.gschema.override << FOE
+cat >> /usr/share/glib-2.0/schemas/org.gnome.software.gschema.override << FOER
 [org.gnome.software]
 download-updates=false
-FOE
+FOER
 
 # don't autostart gnome-software session service
 rm -f /etc/xdg/autostart/gnome-software-service.desktop
 
 # disable the gnome-software shell search provider
-cat >> /usr/share/gnome-shell/search-providers/org.gnome.Software-search-provider.ini << FOE
+cat >> /usr/share/gnome-shell/search-providers/org.gnome.Software-search-provider.ini << FOEI
 DefaultDisabled=true
-FOE
+FOEI
 
 # don't run gnome-initial-setup
 mkdir ~liveuser/.config
 touch ~liveuser/.config/gnome-initial-setup-done
 
 # suppress anaconda spokes redundant with gnome-initial-setup
-cat >> /etc/sysconfig/anaconda << FOE
+cat >> /etc/sysconfig/anaconda << FOEA
 [NetworkSpoke]
 visited=1
 
@@ -499,10 +500,47 @@ visited=1
 
 [UserSpoke]
 visited=1
-FOE
+FOEA
 
 
-cat > /usr/local/bin/liveinst.sh << FOE
+# Show harddisk install in shell dash
+#sed -i -e 's/NoDisplay=true/NoDisplay=false/' /usr/share/applications/liveinst.desktop ""
+# need to move it to anaconda.desktop to make shell happy
+mv /usr/share/applications/liveinst.desktop /usr/share/applications/anaconda.desktop
+
+cat >> /usr/share/glib-2.0/schemas/org.gnome.shell.gschema.override << FOEOVER
+[org.gnome.shell]
+favorite-apps=['firefox.desktop', 'org.gnome.Nautilus.desktop', 'anaconda.desktop', 'org.gnome.Terminal.desktop' ]
+FOEOVER
+
+# Copy Anaconda branding in place
+if [ -d /usr/share/lorax/product/usr/share/anaconda ]; then
+    cp -a /usr/share/lorax/product/* /
+fi
+
+# rebuild schema cache with any overrides we installed
+glib-compile-schemas /usr/share/glib-2.0/schemas
+
+# set up auto-login
+cat > /etc/gdm/custom.conf << FOECUSTOM
+[daemon]
+AutomaticLoginEnable=True
+AutomaticLogin=liveuser
+FOECUSTOM
+
+# Turn off PackageKit-command-not-found while uninstalled
+if [ -f /etc/PackageKit/CommandNotFound.conf ]; then
+  sed -i -e 's/^SoftwareSourceSearch=true/SoftwareSourceSearch=false/' /etc/PackageKit/CommandNotFound.conf
+fi
+
+# make sure to set the right permissions and selinux contexts
+chown -R liveuser:liveuser /home/liveuser/
+restorecon -R /home/liveuser/
+
+EOFLIVESYS
+
+# ============= create file liveinst.sh ========================
+cat > /usr/local/bin/liveinst.sh << FOELSH
 #!/bin/bash
 
 # set hostname before installation
@@ -519,11 +557,12 @@ fi
 
 sudo hostnamectl set-hostname \$HOSTNAME
 /usr/bin/liveinst --lang us --geoloc 0
+FOELSH
 
-FOE
 chmod +x /usr/local/bin/liveinst.sh
 
-cat > /usr/share/applications/liveinst.desktop << FOE
+# ============== create/modify file liveinst.desktop (run liveinst.sh) ==============================
+cat > /usr/share/applications/liveinst.desktop << FOEDESK
 [Desktop Entry]
 Name=Install to Hard Drive
 GenericName=Install
@@ -536,43 +575,8 @@ Icon=anaconda
 StartupNotify=true
 NoDisplay=false
 X-Desktop-File-Install-Version=0.23
-FOE
+FOEDESK
 
-# Show harddisk install in shell dash
-#sed -i -e 's/NoDisplay=true/NoDisplay=false/' /usr/share/applications/liveinst.desktop ""
-# need to move it to anaconda.desktop to make shell happy
-mv /usr/share/applications/liveinst.desktop /usr/share/applications/anaconda.desktop
-
-cat >> /usr/share/glib-2.0/schemas/org.gnome.shell.gschema.override << FOE
-[org.gnome.shell]
-favorite-apps=['firefox.desktop', 'org.gnome.Nautilus.desktop', 'anaconda.desktop', 'org.gnome.Terminal.desktop' ]
-FOE
-
-# Copy Anaconda branding in place
-if [ -d /usr/share/lorax/product/usr/share/anaconda ]; then
-    cp -a /usr/share/lorax/product/* /
-fi
-
-# rebuild schema cache with any overrides we installed
-glib-compile-schemas /usr/share/glib-2.0/schemas
-
-# set up auto-login
-cat > /etc/gdm/custom.conf << FOE
-[daemon]
-AutomaticLoginEnable=True
-AutomaticLogin=liveuser
-FOE
-
-# Turn off PackageKit-command-not-found while uninstalled
-if [ -f /etc/PackageKit/CommandNotFound.conf ]; then
-  sed -i -e 's/^SoftwareSourceSearch=true/SoftwareSourceSearch=false/' /etc/PackageKit/CommandNotFound.conf
-fi
-
-# make sure to set the right permissions and selinux contexts
-chown -R liveuser:liveuser /home/liveuser/
-restorecon -R /home/liveuser/
-
-EOF
 
 %end
 
