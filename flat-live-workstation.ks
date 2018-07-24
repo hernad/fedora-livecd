@@ -372,15 +372,15 @@ su root -c "echo \"\$USERNAME ALL=(ALL) NOPASSWD: ALL\" >> /etc/sudoers"
 
 if sudo dmidecode | grep -i N501VW ; then
    echo ============ asus zenbook N501VW fix grub =================
-   sed -e  's/GRUB_CMDLINE_LINUX=\"\(.*\)\"/GRUB_CMDLINE_LINUX="\1 nouveau.modeset=0 i915.enable_execlists=0 acpi_osi=! acpi_osi=\"Windows 2009\""/' /etc/default/grub > /tmp/grub
-   sudo mv /etc/default/grub /etc/default/grub.orig
-   sudo cp /tmp/grub /etc/default/grub
+   if ! grep "i915\.enable_execlists=0" /etc/default/grub ; then
+     sudo sed -i -e  's/GRUB_CMDLINE_LINUX=\"\(.*\)\"/GRUB_CMDLINE_LINUX="\1 nouveau.modeset=0 i915.enable_execlists=0 acpi_osi=\! acpi_osi=\\\"Windows 2009\\\""/' /etc/default/grub
+   fi
    sudo grub2-mkconfig -o /boot/efi/EFI/fedora/grub.cfg
    echo ========== asus zenbook install bumblebee nvidia https://fedoraproject.org/wiki/Bumblebee  ==================
-   sudo dnf config-manager --add-repo=https://negativo17.org/repos/fedora-nvidia.repo
-   sudo dnf install nvidia-driver kernel-devel akmod-nvidia dkms acpi
-   sudo dnf copr enable chenxiaolong/bumblebee
-   sudo dnf install akmod-bbswitch bumblebee primus
+   sudo dnf -y config-manager --add-repo=https://negativo17.org/repos/fedora-nvidia.repo
+   sudo dnf -y install nvidia-driver kernel-devel akmod-nvidia dkms acpi
+   sudo dnf -y copr enable chenxiaolong/bumblebee
+   sudo dnf -y install akmod-bbswitch bumblebee primus
    sudo gpasswd -a \$USERNAME bumblebee
    sudo systemctl enable bumblebeed
    sudo systemctl disable nvidia-fallback
@@ -471,7 +471,7 @@ if [ "$(uname -i)" = "i386" -o "$(uname -i)" = "x86_64" ]; then
   cp /usr/bin/livecd-iso-to-disk $LIVE_ROOT/LiveOS
 fi
 
-/usr/local/bin/setup_after_install.sh
+/usr/local/bin/setup_user_after_install.sh
 
 %end
 
