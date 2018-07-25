@@ -585,7 +585,8 @@ NoDisplay=false
 X-Desktop-File-Install-Version=0.23
 FOEDESK
 
-
+#dnf -y install docker
+#/sbin/chkconfig docker off
 %end
 
 %packages
@@ -643,6 +644,6 @@ postgresql-devel
 #docker
 fuse-exfat
 transmission
-
+buildah
 %end
 
