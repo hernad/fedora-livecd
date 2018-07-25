@@ -360,15 +360,18 @@ gsettings set org.gnome.desktop.interface clock-show-date true
 #   cp -v $f ~/
 #done
 rsync -avz /etc/home_tmpl/ ~/
-chown -R \$USERNAME:\$USERNAME ~
-echo set \$USERNAME as libvirt group member
-sudo usermod -aG libvirt \$USERNAME
 
-echo set \$USERNAME as wheel group memmber
-sudo usermod -aG wheel \$USERNAME
+if [ -n "\$USERNAME" ] ; then
+  chown -R \$USERNAME:\$USERNAME ~
+  echo set \$USERNAME as libvirt group member
+  sudo usermod -aG libvirt \$USERNAME
 
-echo set \$USERNAME sudo without password enabled 
-su root -c "echo \"\$USERNAME ALL=(ALL) NOPASSWD: ALL\" >> /tmp/sudoers"
+  echo set \$USERNAME as wheel group memmber
+  sudo usermod -aG wheel \$USERNAME
+
+  echo set \$USERNAME sudo without password enabled 
+  su root -c "echo \"\$USERNAME ALL=(ALL) NOPASSWD: ALL\" >> /etc/sudoers"
+fi
 
 if sudo dmidecode | grep -i N501VW ; then
    echo ============ asus zenbook N501VW fix grub =================
@@ -588,7 +591,7 @@ FOEDESK
 #dnf -y install docker
 #/sbin/chkconfig docker off
 
-/sbin/chkconfig postgresql off
+#/sbin/chkconfig postgresql off
 
 
 %end
