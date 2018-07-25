@@ -587,6 +587,9 @@ FOEDESK
 
 #dnf -y install docker
 #/sbin/chkconfig docker off
+
+/sbin/chkconfig postgresql off
+
 %end
 
 %packages
@@ -638,7 +641,7 @@ code
 awscli
 dnf-utils
 flatpak
-
+postgresql
 postgresql-devel
 
 #docker
