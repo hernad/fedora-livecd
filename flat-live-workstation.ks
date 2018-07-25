@@ -368,7 +368,7 @@ echo set \$USERNAME as wheel group memmber
 sudo usermod -aG wheel \$USERNAME
 
 echo set \$USERNAME sudo without password enabled 
-su root -c "echo \"\$USERNAME ALL=(ALL) NOPASSWD: ALL\" >> /etc/sudoers"
+su root -c "echo \"\$USERNAME ALL=(ALL) NOPASSWD: ALL\" >> /tmp/sudoers"
 
 if sudo dmidecode | grep -i N501VW ; then
    echo ============ asus zenbook N501VW fix grub =================
@@ -645,7 +645,7 @@ flatpak
 #postgresql
 #postgresql-server
 #postgresql-contrib
-#postgresql-devel
+postgresql-devel
 
 #docker
 fuse-exfat
