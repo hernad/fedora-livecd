@@ -471,7 +471,6 @@ if [ "$(uname -i)" = "i386" -o "$(uname -i)" = "x86_64" ]; then
   cp /usr/bin/livecd-iso-to-disk $LIVE_ROOT/LiveOS
 fi
 
-/usr/local/bin/setup_user_after_install.sh
 
 %end
 
@@ -590,6 +589,8 @@ FOEDESK
 
 /sbin/chkconfig postgresql off
 
+su liveuser -c /usr/local/bin/setup_user_after_install.sh
+
 %end
 
 %packages
@@ -642,6 +643,8 @@ awscli
 dnf-utils
 flatpak
 postgresql
+postgresql-server
+postgresql-contrib
 postgresql-devel
 
 #docker
