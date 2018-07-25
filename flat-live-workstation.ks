@@ -648,5 +648,6 @@ postgresql-devel
 fuse-exfat
 transmission
 buildah
+maven
 %end
 
