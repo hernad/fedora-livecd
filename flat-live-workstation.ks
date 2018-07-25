@@ -46,8 +46,8 @@ zerombr
 # Partition clearing information
 clearpart --all
 # Disk partitioning information
-part / --fstype="ext4" --size=8520
-part / --size=9956
+part / --fstype="ext4" --size=9520
+part / --size=10956
 
 %post
 # FIXME: it'd be better to get this installed from a package
@@ -544,6 +544,7 @@ fi
 chown -R liveuser:liveuser /home/liveuser/
 restorecon -R /home/liveuser/
 
+su liveuser -c /usr/local/bin/setup_user_after_install.sh
 EOFLIVESYS
 
 # ============= create file liveinst.sh ========================
@@ -589,7 +590,6 @@ FOEDESK
 
 /sbin/chkconfig postgresql off
 
-su liveuser -c /usr/local/bin/setup_user_after_install.sh
 
 %end
 
