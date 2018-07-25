@@ -46,8 +46,8 @@ zerombr
 # Partition clearing information
 clearpart --all
 # Disk partitioning information
-part / --fstype="ext4" --size=9520
-part / --size=10956
+part / --fstype="ext4" --size=8120
+part / --size=9656
 
 %post
 # FIXME: it'd be better to get this installed from a package
@@ -650,7 +650,7 @@ postgresql-devel
 #docker
 fuse-exfat
 transmission
-buildah
+#buildah
 maven
 %end
 
