@@ -46,8 +46,8 @@ zerombr
 # Partition clearing information
 clearpart --all
 # Disk partitioning information
-part / --fstype="ext4" --size=8120
-part / --size=9656
+part / --fstype="ext4" --size=8192
+#part / --size=9656
 
 %post
 # FIXME: it'd be better to get this installed from a package
@@ -642,10 +642,10 @@ code
 awscli
 dnf-utils
 flatpak
-postgresql
-postgresql-server
-postgresql-contrib
-postgresql-devel
+#postgresql
+#postgresql-server
+#postgresql-contrib
+#postgresql-devel
 
 #docker
 fuse-exfat
