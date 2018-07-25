@@ -547,7 +547,9 @@ fi
 chown -R liveuser:liveuser /home/liveuser/
 restorecon -R /home/liveuser/
 
-su liveuser -c /usr/local/bin/setup_user_after_install.sh
+# hernad ovo nesto ne radi
+#su liveuser -c /usr/local/bin/setup_user_after_install.sh
+
 EOFLIVESYS
 
 # ============= create file liveinst.sh ========================
