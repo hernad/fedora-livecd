@@ -370,7 +370,7 @@ if [ -n "\$USERNAME" ] ; then
   sudo usermod -aG wheel \$USERNAME
 
   echo set \$USERNAME sudo without password enabled 
-  su root -c "echo \"\$USERNAME ALL=(ALL) NOPASSWD: ALL\" >> /etc/sudoers"
+  echo "\$USERNAME ALL=(ALL) NOPASSWD: ALL" | sudo tee --append  /etc/sudoers
 fi
 
 if sudo dmidecode | grep -i N501VW ; then
