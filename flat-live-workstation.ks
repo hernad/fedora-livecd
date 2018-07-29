@@ -636,7 +636,7 @@ nodejs
 gcc-c++ 
 make
 git
-vlc
+#vlc
 tmux
 tmux-powerline
 vim-powerline
@@ -654,8 +654,8 @@ postgresql-devel
 
 #docker
 fuse-exfat
-transmission
+#transmission
 #buildah
-maven
+#maven
 %end
 
