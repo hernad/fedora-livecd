@@ -1,0 +1,55 @@
+#platform=x86, AMD64, or Intel EM64T
+#version=RHEL7
+
+#
+# Selected packages
+#
+%packages
+@nethserver-iso
+@core
+%end
+
+repo --name=nethserver --baseurl=file:///run/install/repo/extras
+
+# Install OS instead of upgrade
+install
+firewall --disable
+# System language
+lang en_US
+# SELinux configuration
+selinux --permissive
+# Do not configure the X Window System
+skipx
+# Installation logging level
+logging --level=debug
+
+%post --interpreter /bin/bash
+exec 1>/root/kickstart-post.log 2>&1
+
+echo "Enabling first-boot..."
+touch /var/spool/first-boot
+
+echo "Importing RPM GPG keys..."
+rpm --import /etc/pki/rpm-gpg/*
+
+echo "Enable nethserver units..."
+systemctl enable nethserver-system-init
+systemctl enable nethserver-config-network
+systemctl disable NetworkManager firewalld
+
+echo "Disable kdump..."
+systemctl disable kdump
+
+echo "Forcing system time to UTC ..."
+sed -i 's/LOCAL/UTC/' /etc/adjtime
+
+if [ -f /etc/nethserver-release ]; then
+  echo "Fix /etc/issue..."
+  cp -f /etc/nethserver-release /etc/issue
+  echo -e 'Kernel \\r on an \\m\n' >> /etc/issue
+  echo 'Access the web interface at the following URLs:' >> /etc/issue
+  ip -o -4 addr | tr -s ' /' $'\t' | cut -f 4 | grep -vF 127.0.0.1 | xargs -I IP -- echo https://IP:980 >> /etc/issue
+  echo >> /etc/issue
+fi
+
+%end

@@ -1,0 +1,161 @@
+#platform=x86, AMD64, or Intel EM64T
+#version=DEVEL
+%pre
+
+# eval options
+set -- `cat /proc/cmdline`
+
+for I in $*; do case "$I" in *=*) eval $I;; esac; done
+
+# Determine how many drives we have
+if [ -z "$disks" ]; then
+    disks=()
+    tmp=( $(list-harddrives | cut -d' ' -f 1) )
+    for d in "${tmp[@]}"
+    do
+        if [[ $d == md* ]]; then
+            # skip md raid devices
+            continue
+        fi
+        mount | grep -q /dev/$d
+        if [ $? -gt 0 ]; then
+            disks+=($d)
+        fi
+    done
+
+    numd=${#disks[@]}
+    d1=${disks[0]}
+    d2=${disks[1]}
+else
+    d1=`echo $disks | awk 'BEGIN { FS = "," } ; { print $1 }'`
+    d2=`echo $disks | awk 'BEGIN { FS = "," } ; { print $2 }'`
+    if [ -z "$d2" ]; then
+       numd=1
+    else
+       numd=2
+    fi
+fi
+
+if [ $numd -lt 2 ] || [ $raid = "none"  ] ; then
+    cat <<EOF >> /tmp/part-include
+    # 1 disk, no raid
+    part /boot --fstype xfs --size 1024
+    part pv.1 --asprimary --ondisk=$d1 --size=5000 --grow
+EOF
+    echo "bootloader --location=mbr " > /tmp/bootloader-include
+elif [ $numd -ge 2 ]; then
+    cat <<EOF >> /tmp/part-include
+    # 2 disks, raid 1
+    part raid.00 --asprimary --ondisk=$d1 --size=1024 # boot
+    part raid.01 --asprimary --ondisk=$d1 --size=5000 --grow # root
+
+    part raid.10 --asprimary --ondisk=$d2 --size=1024 # boot
+    part raid.11 --asprimary --ondisk=$d2 --size=5000 --grow # root
+
+    raid /boot --device=md1 --fstype='xfs' --level=RAID1 raid.00 raid.10
+    raid pv.1 --device=md2 --level=RAID1 raid.01 raid.11
+EOF
+    echo "bootloader --location=mbr " > /tmp/bootloader-include
+fi
+
+# enable dhcp on all network interfaces
+for net in `find /sys/class/net/ -mindepth 1 ! -name lo | cut -d '/' -f5`; do
+    echo "network --activate --onboot=yes --bootproto=dhcp --device=$net" >>/tmp/network-include
+done
+echo "network --nameserver=8.8.8.8 --hostname=localhost.localdomain" >> /tmp/network-include
+
+# set keyboard
+if [ -z $keyboard ]; then
+   keyboard="keyboard --vckeymap=us --xlayouts='us'"
+fi
+echo "keyboard --vckeymap=$keyboard --xlayouts='$keyboard'" > /tmp/keyboard-include
+
+# set timezone
+if [ -z $timezone ]; then
+   timezone="--utc UTC"
+fi
+echo "timezone $timezone" > /tmp/timezone-include
+
+# set encrypted fs
+if [ -z $fspassword ]; then
+   echo "logvol / --fstype xfs --name=lv_root --vgname=VolGroup --percent=100" > /tmp/rootfs-include
+else
+   echo "logvol / --fstype xfs --name=lv_root --vgname=VolGroup --percent=100 --encrypted --passphrase=$fspassword" > /tmp/rootfs-include
+fi
+
+
+%end
+
+#
+# Selected packages
+#
+%packages
+@nethserver-iso
+@core
+%end
+
+repo --name=nethserver --baseurl=file:///run/install/repo/extras
+
+# Install OS instead of upgrade
+install
+# Network information
+%include /tmp/network-include
+firewall --disable
+# Root password
+rootpw --plaintext Nethesis,1234
+# System keyboard
+%include /tmp/keyboard-include
+# System language
+lang en_US
+# SELinux configuration
+selinux --permissive
+# Do not configure the X Window System
+skipx
+# Installation logging level
+logging --level=debug
+# System timezone
+%include /tmp/timezone-include
+# System bootloader configuration
+%include /tmp/bootloader-include
+# Clear the Master Boot Record
+zerombr
+# Partition clearing information
+clearpart --all
+reqpart --add-boot
+# Disk partitioning information
+%include /tmp/part-include
+# LVM
+volgroup VolGroup pv.1
+logvol swap --fstype swap --name=lv_swap --vgname=VolGroup --recommended --maxsize=6000
+%include /tmp/rootfs-include
+# Reboot and eject CD
+reboot --eject
+
+
+%post --interpreter /bin/bash
+exec 1>/root/kickstart-post.log 2>&1
+
+echo "Enabling first-boot..."
+touch /var/spool/first-boot
+
+echo "Importing RPM GPG keys..."
+rpm --import /etc/pki/rpm-gpg/*
+
+echo "Enable nethserver units..."
+systemctl enable nethserver-system-init
+systemctl enable nethserver-config-network
+systemctl disable NetworkManager firewalld
+
+echo "Disable kdump..."
+systemctl disable kdump
+
+if [ -f /etc/nethserver-release ]; then
+  echo "Fix /etc/issue..."
+  cp -f /etc/nethserver-release /etc/issue
+  echo -e 'Kernel \\r on an \\m\n' >> /etc/issue
+  echo 'Access the web interface at the following URLs:' >> /etc/issue
+  ip -o -4 addr | tr -s ' /' $'\t' | cut -f 4 | grep -vF 127.0.0.1 | xargs -I IP -- echo https://IP:980 >> /etc/issue
+  echo >> /etc/issue
+fi
+
+%end

@@ -1,0 +1,260 @@
+#!/bin/bash
+
+#
+# Copyright (C) 2015 Nethesis S.r.l.
+# http://www.nethesis.it - support@nethesis.it
+# 
+# This script is part of NethServer.
+# 
+# NethServer is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License,
+# or any later version.
+# 
+# NethServer is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with NethServer.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+# Check if tools are available:
+for P in fuseiso fusermount mkisofs mock implantisomd5; do
+    which $P >/dev/null 2>&1 || { echo "Missing '$P' executable!"; exit 1; }
+done
+
+if ! [ -f /usr/share/syslinux/hdt.c32 ]; then
+    echo "Could not find /usr/share/syslinux/hdt.c32: missing syslinux package?";
+    exit 1;
+fi
+
+USER_GROUPS=$(groups)
+
+if [[ "${USER_GROUPS}" != *"mock"* ]]; then
+    echo "You must be member of mock group!" 1>&2;
+    exit 1;
+fi
+
+
+# Assign fallback values, for undefined parameters:
+WORKDIR=$(pwd)
+COMPS_TMP=`mktemp -u --tmpdir=${WORKDIR} comps.XXXXXX`
+export LANG=C
+ISO_LIB=${ISO_LIB:-/usr/share/nethserver-createiso}
+
+set -e
+
+function exit_error {
+   echo $1 >&2
+   exit 1
+}
+
+function help {
+   echo "Usage: $0 -i input.iso -n product_name -v product_version" >&2
+   echo '
+             -i input.iso         : The CentOS minimal ISO file
+             -n product_basename  : The first part of the output file name
+             -v product_version   : major.minor[-release] 
+' >&2
+}
+
+function prepare_clone_iso {
+    local iso_file=$1
+    local iso_mount=$2
+    local iso_clone=$3
+
+    echo "Mounting ISO image $iso_file ..."
+    fuseiso $iso_file $iso_mount
+    echo "Copying ISO contents ..."
+    rsync -a $iso_mount/ $iso_clone/
+    echo "Setting write permissions on $iso_clone..."
+    chmod -R u+w $iso_clone
+}
+
+
+while getopts "i:n:v:h" opt; do
+    case $opt in
+	i)
+	    input_iso=$OPTARG
+	    [ -z "${input_iso}" ] && exit_error "No input iso file given"
+	    ;;
+	n)
+	    input_product_basename=$OPTARG
+	    ;;
+	v)
+	    input_product_version=$OPTARG
+	    ;;
+	h)
+	    help
+	    exit 0
+	    ;;
+	\?)
+	    help
+	    exit_error "Invalid option: -$OPTARG"
+	    ;;
+    esac
+done
+
+if [ -z "${input_product_basename}" ]; then
+    help
+    exit_error "-n: missing name argument"
+fi
+if [ -z "${input_product_version}" ]; then
+    help
+    exit_error "-v: missing version argument"
+fi
+
+BRAND_DIR=${ISO_LIB}/${input_product_basename}
+if [ ! -f "${BRAND_DIR}/config" ]; then
+    exit_error "Invalid product name. Please see ${ISO_LIB}"
+fi
+
+source "${BRAND_DIR}/config"
+
+product_basename=${input_product_basename}
+product_version=${input_product_version:-${product_version}}
+product_arch=${product_arch:-x86_64}
+product_label=$(echo ${product_basename} | tr -d '[[:space:]]')
+
+echo "Using the following parameters:
+   * ${product_name}
+        basename: ${product_basename}
+        version: ${product_version}
+        arch: ${product_arch}
+   * Mock configuration: ${mock_config}
+
+"
+
+if ! [ -r "${input_iso}" ]; then
+    exit_error "Could not read input iso file ${input_iso}."
+fi
+
+# Temporary directories:
+MOUNT_ISO=`mktemp -d --tmpdir=${WORKDIR} mnt.XXXXXX`
+CLONE_ISO=`mktemp -d --tmpdir=${WORKDIR} iso.XXXXXX`
+PRODUCT_IMG=`mktemp -d --tmpdir=${WORKDIR} product.XXXXXX`
+
+function cleanup_temporary_files {
+    echo "Cleaning up temporary files..."
+    fusermount -q -u ${MOUNT_ISO}
+    [ -d ${MOUNT_ISO} ] && rmdir ${MOUNT_ISO}
+    [ -d ${CLONE_ISO} ] && rm -rf ${CLONE_ISO}
+    [ -d ${PRODUCT_IMG} ] && rm -rf ${PRODUCT_IMG}
+    [ -f ${COMPS_TMP} ] && rm ${COMPS_TMP}
+    mock -r ${mock_config} --clean
+}
+
+trap cleanup_temporary_files EXIT SIGTERM
+
+prepare_clone_iso ${input_iso} ${MOUNT_ISO} ${CLONE_ISO}
+
+echo "Creating ISO directories..."
+mkdir -vp ${CLONE_ISO}/{isolinux,ks,extras}
+
+echo "Copying brand files..."
+cp -v $BRAND_DIR/splash.jpg ${CLONE_ISO}/isolinux/
+
+echo "Creating ISOLINUX (legacy) configuration..."
+sed "s/_PRODUCTVERSION_/${product_version}/
+s/_PRODUCTNAME_/${product_name}/
+s/_LABEL_/${product_label}/g" $ISO_LIB/isolinux.cfg > ${CLONE_ISO}/isolinux/isolinux.cfg
+
+echo "Creating GRUB2 (UEFI) configuration..."
+sed "s/_PRODUCTVERSION_/${product_version}/
+s/_PRODUCTNAME_/${product_name}/
+s/_LABEL_/${product_label}/g" $ISO_LIB/grub.cfg > ${CLONE_ISO}/EFI/BOOT/grub.cfg
+
+echo "Creating product img..."
+mkdir -p $PRODUCT_IMG/product/usr/share/anaconda/
+cp -rv $BRAND_DIR/pixmaps $PRODUCT_IMG/product/usr/share/anaconda/
+pushd $PRODUCT_IMG/product
+find . | cpio -c -o | gzip -9cv > $PRODUCT_IMG/product.img
+popd
+cp -v $PRODUCT_IMG/product.img  ${CLONE_ISO}/images
+
+echo "Copying syslinux hardware detection tool..."
+cp -v /usr/share/syslinux/hdt.c32 ${CLONE_ISO}/isolinux/
+
+echo "Copying kickstart files..."
+cp -vp ${ISO_LIB}/ks/* ${CLONE_ISO}/ks/
+
+echo "Downloading packages from @nethserver-iso group and their dependencies..."
+mock -r ${mock_config} --yum-cmd -- --downloadonly --downloaddir=${CLONE_ISO}/extras install @nethserver-iso
+
+echo "Extra RPMs added to ISO:"
+find ${CLONE_ISO}/extras -name '*.rpm' -printf "%f\n" | sort
+echo -ne "\nDisk usage: "; du -h -s ${CLONE_ISO}/extras
+
+
+echo "Creating yum groups metadata..."
+iso_packages=$(mock -r ${mock_config} --yum-cmd -- groupinfo nethserver-iso | sed -n '/   .\w/ p' | tr -d '\r' | cut -b 5- | sort)
+echo "The following packages will be added to ${input_iso} and installed in the final system:"
+for P in ${iso_packages}; do
+    echo "   $P"
+    packagereqs+="<packagereq type='mandatory'>${P}</packagereq>" 
+done
+echo "...dependencies are excluded here: yum will take care of them."
+
+cat - > ${COMPS_TMP} <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE comps PUBLIC "-//Red Hat, Inc.//DTD Comps info//EN" "comps.dtd">
+<comps>
+  <group>
+   <id>nethserver-iso</id>
+   <default>false</default>
+   <uservisible>false</uservisible>
+   <display_order>1024</display_order>
+   <name>${product_name} ISO</name>
+   <description>${product_name} ISO group</description>
+    <packagelist>
+      ${packagereqs}
+    </packagelist>
+  </group>
+</comps>
+EOF
+
+echo "Removing duplicated rpms..."
+for f in $(find ${CLONE_ISO}/extras/ -name \*.rpm)
+do
+    fb=$(basename $f)
+    if [ -e "${CLONE_ISO}/Packages/$fb" ]; then
+       rm -vf $f
+    fi
+done
+
+echo "Creating yum repository with groups metadata..."
+createrepo -g ${COMPS_TMP} ${CLONE_ISO}/extras/
+
+echo "Copying GPG keys..."
+cp -v $ISO_LIB/RPM-GPG-KEY-* ${CLONE_ISO}/
+
+OUTPUT_ISO="${WORKDIR}/${product_basename}-${product_version}-${product_arch}.iso"
+echo "Creating ${OUTPUT_ISO} ..."
+
+genisoimage -U -r -v -T -J -joliet-long -V "${product_label:0:32}" -volset "${product_label:0:128}" -A "${product_label:0:128}" -b isolinux/isolinux.bin -c isolinux/boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table -eltorito-alt-boot -e images/efiboot.img -no-emul-boot -o ${OUTPUT_ISO} ${CLONE_ISO} 
+
+echo -n "ISO size: "
+du -h -s ${OUTPUT_ISO}
+
+echo "Implanting ISO checksum..."
+implantisomd5 --force "${OUTPUT_ISO}"
+
+echo "Executing isohybrid..."
+/usr/bin/isohybrid ${OUTPUT_ISO}
+
+echo "Creating ISO checksums ..."
+ISO_NAME=$(basename ${OUTPUT_ISO})
+pushd ${WORKDIR}
+md5sum ${ISO_NAME} > ${OUTPUT_ISO}.md5
+sha1sum ${ISO_NAME} > ${OUTPUT_ISO}.sha1
+touch -r ${ISO_NAME} ${OUTPUT_ISO}.md5
+touch -r ${ISO_NAME} ${OUTPUT_ISO}.sha1
+popd
+
+echo "*" 
+echo "* DONE. Written ISO file:"
+echo "*   ${OUTPUT_ISO}"
+echo "*"
+
