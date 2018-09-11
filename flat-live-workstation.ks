@@ -1,10 +1,52 @@
+
+# https://pagure.io/fedora-kickstarts/blob/f28/f/fedora-live-workstation.ks
+# /usr/share/doc/lorax/fedora-livemedia.ks
+# ksflatten (pykickstart rpm)
+
+# https://gitlab.gnome.org/GNOME/gnome-initial-setup/blob/master/HACKING
+
+
+#To enable the initial-setup functionality in gdm, set
+
+#InitialSetupEnable=True
+
+# in the [daemon] section of /etc/gdm/custom.conf. To actually trigger the initial-setup, 
+# gdm additionally looks for the file /var/lib/gdm/run-initial-setup. gdm removes this file after
+# the initial setup has been performed.
+
+# Normally, it is not possible to return to Initial Setup after you close it and log in to the system. 
+# You can make it display again (after the next reboot, before a login prompt is displayed), 
+# by executing the following command as root:
+# systemctl enable initial-setup-graphical.service
+
+
 #version=DEVEL
 # X Window System configuration information
 xconfig  --startxonboot
 # Keyboard layouts
 keyboard 'us'
+
+
+
+
+
+
+#Sets the system's root password to the password argument.
+#rootpw [--iscrypted|--plaintext] [--lock] password
+#--iscrypted - If this option is present, the password argument is assumed to already be encrypted. This option is mutually exclusive with --plaintext. 
+# To create an encrypted password, you can use python:
+# $ python -c 'import crypt,getpass;pw=getpass.getpass();print(crypt.crypt(pw) if (pw==getpass.getpass("Confirm: ")) else exit())'
+# This generates a sha512 crypt-compatible hash of your password using a random salt.
+#--plaintext - If this option is present, the password argument is assumed to be in plain text. This option is mutually exclusive with --iscrypted.
+#--lock - If this option is present, the root account is locked by default. This means that the root user will not be able to log in from the console. 
+# This option will also disable the Root Password screens in both the graphical and text-based manual installation.
+
 # Root password
-rootpw --iscrypted --lock locked
+#rootpw --iscrypted --lock locked
+rootpw --iscrypted $6$rCvQg9SOy6iA.dPp$9S6LKo6NU4Npr2iL.2mvdxAAeQFy3.1jJ9mURq8w6SZeAjCOMaEagiDDNrXtX23ZpNB9RUZltqSOkQFeLH3dN0
+
+
+
 # System language
 lang en_US.UTF-8
 # Shutdown after installation
@@ -465,6 +507,24 @@ touch /etc/machine-id
 
 %end
 
+
+# --nochroot
+# Allows you to specify commands that you would like to run outside of the chroot environment.
+# The following example copies the file /etc/resolv.conf to the file system that was just installed.
+#
+# $INSTALL_ROOT is for the root of the filesystem of the LiveCD that will eventually be compressed. 
+# This is where all of the packages get installed during the build process. 
+# Use this if you want the files on the LiveCD OS filesystem.
+# $LIVE_ROOT is the root of the CD. Use this if you want the files available without having to boot
+# to the LiveCD or uncompressing the filesystem on the CD. 
+# For example, you would copy files to $LIVE_ROOT if you wanted to be able to put the CD 
+# in a running system and see them. As in your post above, /EFI, /isolinux, /LiveOS.
+# There is no variable for the root of the installed (host) system. 
+# You retain access to it by using the %post --nochroot
+# touch $INSTALL_ROOT/this-is-install-root
+# touch $LIVE_ROOT/this-is-live-root
+
+
 %post --nochroot
 cp $INSTALL_ROOT/usr/share/licenses/*-release/* $LIVE_ROOT/
 
@@ -496,7 +556,7 @@ cat >> /usr/share/gnome-shell/search-providers/org.gnome.Software-search-provide
 DefaultDisabled=true
 FOEI
 
-# don't run gnome-initial-setup
+# don't run gnome-initial-setup u livecd rezimu
 mkdir ~liveuser/.config
 touch ~liveuser/.config/gnome-initial-setup-done
 
@@ -651,6 +711,7 @@ flatpak
 #postgresql-server
 #postgresql-contrib
 postgresql-devel
+terminus-fonts
 
 #docker
 fuse-exfat
