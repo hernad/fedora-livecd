@@ -28,9 +28,6 @@ keyboard 'us'
 
 
 
-
-
-
 #Sets the system's root password to the password argument.
 #rootpw [--iscrypted|--plaintext] [--lock] password
 #--iscrypted - If this option is present, the password argument is assumed to already be encrypted. This option is mutually exclusive with --plaintext. 
@@ -56,7 +53,7 @@ timezone Europe/Sarajevo
 # Network information
 network  --bootproto=dhcp --device=link --activate
 repo --name="fedora" --mirrorlist=https://mirrors.fedoraproject.org/mirrorlist?repo=fedora-$releasever&arch=$basearch
-#repo --name="updates" --mirrorlist=https://mirrors.fedoraproject.org/mirrorlist?repo=updates-released-f$releasever&arch=$basearch
+repo --name="updates" --mirrorlist=https://mirrors.fedoraproject.org/mirrorlist?repo=updates-released-f$releasever&arch=$basearch
 
 repo --name=rpmfusionfree --mirrorlist=http://mirrors.rpmfusion.org/mirrorlist?repo=free-fedora-$releasever&arch=$basearch
 repo --name=rpmfusionfreeupdates --mirrorlist=http://mirrors.rpmfusion.org/mirrorlist?repo=free-fedora-updates-released-$releasever&arch=$basearch
@@ -81,7 +78,7 @@ services --enabled="NetworkManager,ModemManager,sshd"
 # System bootloader configuration
 
 # hernad nouveau asuszenbook freeze
-bootloader --location=none --append="nouveau.modeset=0"
+bootloader --location=none --append="nouveau.modeset=0 inst.geoloc=0"
 
 # Clear the Master Boot Record
 zerombr
