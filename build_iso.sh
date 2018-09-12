@@ -2,11 +2,15 @@
 
 setenforce 0
 
-KS=flat-live-workstation.ks
+#KS=flat-live-workstation.ks
+KS=flat-rawhide.ks
 #KS=flat-vanila.ks
 #KS=centos/centos-gnome.ks
 
+#ISO=FWS-bringout
+ISO=FWS-bringout-rawhide
+
 livecd-creator --verbose \
   --config=$KS \
-  --fslabel=FWS-bringout \
+  --fslabel=$ISO \
   --cache=/var/cache/live
