@@ -2,9 +2,9 @@
 
 setenforce 0
 
-#KS=flat-live-workstation.ks
+KS=flat-live-workstation.ks
 #KS=flat-rawhide.ks
-KS=flat-vanila.ks
+#KS=flat-vanilla.ks
 #KS=centos/centos-gnome.ks
 
 ISO=FWS-bringout
